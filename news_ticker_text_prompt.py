@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import ast
 
 
 class NewsTickerApp(tk.Tk):
@@ -11,6 +12,7 @@ class NewsTickerApp(tk.Tk):
 
         self.current_char_index = 0
         self.text_content = ""
+        self.file_path = ""
         self.playing = False
 
         # Set up menu
@@ -35,6 +37,7 @@ class NewsTickerApp(tk.Tk):
         self.bind("<Down>", self.decrease_speed)
         self.bind("<Left>", self.skip_back)
         self.bind("<Right>", self.skip_forward)
+        self.bind("<space>", self.toggle_play)
 
     def _setup_menu(self):
         menu = tk.Menu(self)
@@ -42,6 +45,7 @@ class NewsTickerApp(tk.Tk):
         # File menu
         file_menu = tk.Menu(menu, tearoff=0)
         file_menu.add_command(label="Open", command=self.open_file)
+        file_menu.add_command(label="Open Save", command=self.open_save_file)
         file_menu.add_command(label="Save", command=self.save_progress)
         file_menu.add_command(label="Help", command=self.show_help)
         menu.add_cascade(label="File", menu=file_menu)
@@ -58,7 +62,24 @@ class NewsTickerApp(tk.Tk):
         if filepath:
             with open(filepath, "r") as file:
                 self.text_content = file.read().replace("\n", " ")
+            self.file_path = filepath
             self.current_char_index = 0
+            self.update_display()
+
+    def open_save_file(self):
+        filepath = filedialog.askopenfilename(
+            title="Open Save File", filetypes=[("Text Files", "*.txt")]
+        )
+        if filepath:
+            with open(filepath, "r") as file:
+                save_data = ast.literal_eval(file.read())
+                self.file_path = save_data["file_path"]
+                self.current_char_index = save_data["current_char_index"]
+                self.speed = save_data["speed"]
+
+            with open(self.file_path, "r") as file:
+                self.text_content = file.read().replace("\n", " ")
+
             self.update_display()
 
     def save_progress(self):
@@ -67,6 +88,7 @@ class NewsTickerApp(tk.Tk):
         )
         if filepath:
             save_data = {
+                "file_path": self.file_path,
                 "current_char_index": max(0, self.current_char_index - 50),
                 "speed": self.speed,
             }
@@ -84,7 +106,7 @@ class NewsTickerApp(tk.Tk):
         help_text.pack(fill=tk.BOTH, expand=True)
         help_text.config(state=tk.DISABLED)
 
-    def toggle_play(self):
+    def toggle_play(self, event=None):
         self.playing = not self.playing
         if self.playing:
             self.start_ticker()
@@ -107,10 +129,8 @@ class NewsTickerApp(tk.Tk):
             middle_index = self.current_char_index - start_index
             formatted_text = (
                 visible_text[:middle_index]
-                + f"[{visible_text[middle_index]}]"
+                + visible_text[middle_index:middle_index + 1]
                 + visible_text[middle_index + 1:]
-                if middle_index < len(visible_text)
-                else visible_text
             )
             self.label.config(text=formatted_text)
 
